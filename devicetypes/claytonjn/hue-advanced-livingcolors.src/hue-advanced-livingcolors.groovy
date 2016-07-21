@@ -24,6 +24,8 @@ metadata {
 		command "alert"
 		command "colorloopOn"
 		command "colorloopOff"
+        command "setColorLoopOn"
+        command "setColorLoopOff"
 		command "bri_inc"
 		command "sat_inc"
 		command "hue_inc"
@@ -73,8 +75,8 @@ metadata {
 		}
 
 		standardTile("effectControl", "device.effect", height: 2, width: 2, inactiveLabel: false, decoration: "flat") {
-			state "none", label:"Colorloop Off", action:"colorloopOn", nextState: "updating", icon:"https://raw.githubusercontent.com/claytonjn/SmartThingsPublic/Hue-Advanced-Development/smartapp-icons/hue-advanced/png/colorloop-off.png"
-			state "colorloop", label:"Colorloop On", action:"colorloopOff", nextState: "updating", icon:"https://raw.githubusercontent.com/claytonjn/SmartThingsPublic/Hue-Advanced-Development/smartapp-icons/hue-advanced/png/colorloop-on.png"
+			state "none", label:"Colorloop Off", action:"setColorLoopOn", nextState: "updating", icon:"https://raw.githubusercontent.com/claytonjn/SmartThingsPublic/Hue-Advanced-Development/smartapp-icons/hue-advanced/png/colorloop-off.png"
+			state "colorloop", label:"Colorloop On", action:"setColorLoopOff", nextState: "updating", icon:"https://raw.githubusercontent.com/claytonjn/SmartThingsPublic/Hue-Advanced-Development/smartapp-icons/hue-advanced/png/colorloop-on.png"
 			state "updating", label:"Working", icon: "st.secondary.secondary"
 		}
 
@@ -118,9 +120,10 @@ void setTransitionTime(transitionTime) {
 void on(transitionTime = device.currentValue("transitionTime")) {
 	if(transitionTime == null) { transitionTime = device.currentValue("transitionTime") ?: parent.getSelectedTransition() ?: 1 }
 
-	colorloopOff()
 	log.trace parent.on(this, transitionTime, deviceType)
 	sendEvent(name: "switch", value: "on")
+    if(state.colorLoopState == "on"){colorloopOn()}
+    if(state.colorLoopState == "off"){colorloopOff()}
 }
 
 void off(transitionTime = device.currentValue("transitionTime")) {
@@ -279,6 +282,15 @@ void alert(alert) {
 	parent.setAlert(this, alert, deviceType)
 }
 
+void setColorLoopOn(){
+	state.colorLoopState = "on"
+    colorloopOn()
+}
+
+void setColorLoopOff(){
+	state.colorLoopState = "off"
+    colorloopOff()
+}
 void colorloopOn() {
 	log.debug "Executing 'colorloopOn'"
 	if(device.latestValue("switch") != "on") { on() }
