@@ -201,7 +201,8 @@ void setColor(value) {
     def events = []
     def validValues = [:]
 
-	if (value.transitionTime) { validValues.transitionTime = value.transitionTime }
+	// Fixed by nswilliams if 0 it means false, but we want zero value to pass thru
+	if (value.transitionTime!=null) { validValues.transitionTime = value.transitionTime }
 	else {
 		def transitionTime = (device.currentValue("transitionTime")) ?: parent.getSelectedTransition() ?: 3
 		validValues.transitionTime = transitionTime
