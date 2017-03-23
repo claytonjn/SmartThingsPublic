@@ -279,7 +279,7 @@ def advancedSettings() {
 	return dynamicPage(name:"advancedSettings", title:"Advanced Settings", nextPage:"", install:true, uninstall:true) {
 		section("Default Transition") {
 			paragraph	"Choose how long lights should take to transition between on/off and color changes by default. This can be modified per-device."
-			input		"selectedTransition", "number", required:true, title:"Transition Time (seconds)", defaultValue:1
+			input		"selectedTransition", "number", required:true, title:"Transition Time (in 1/10th second)", defaultValue:4
 		}
 		section("Circadian Daylight Integration") {
 			paragraph	"Add buttons to each device page, allowing you to enable/disable automatic color changes and dynamic brightness per-device, on the fly."
@@ -1361,7 +1361,7 @@ def on(childDevice, transitionTime, deviceType) {
 	def id = getId(childDevice)
 	updateInProgress()
 	createSwitchEvent(childDevice, "on")
-	put("${deviceType}/$id/${getApi(deviceType)}", [on: true, transitiontime: transitionTime * 10])
+	put("${deviceType}/$id/${getApi(deviceType)}", [on: true, transitiontime: transitionTime]) // By nswilliams: removed x 10 to have faster transitionTime
     return "Light is turning On"
 }
 
@@ -1369,8 +1369,8 @@ def off(childDevice, transitionTime, deviceType) {
 	log.debug "Executing 'off'"
 	def id = getId(childDevice)
 	updateInProgress()
-	createSwitchEvent(childDevice, "off")
-	put("${deviceType}/$id/${getApi(deviceType)}", [on: false]) //, transitiontime: transitionTime * 10]) TODO: uncomment when bug resolved. See http://www.developers.meethue.com/content/using-transitiontime-onfalse-resets-bri-1
+	createSwitchEvent(childDevice, "off") 
+	put("${deviceType}/$id/${getApi(deviceType)}", [on: false]) //, transitiontime: transitionTime]) TODO: uncomment when bug resolved. See http://www.developers.meethue.com/content/using-transitiontime-onfalse-resets-bri-1
     return "Light is turning Off"
 }
 
@@ -1381,7 +1381,7 @@ def setLevel(childDevice, percent, transitionTime, deviceType) {
 	// 1 - 254
     def level = stLeveltoHue(percent)
 	createSwitchEvent(childDevice, level > 0 ,percent)
-	put("${deviceType}/$id/${getApi(deviceType)}", [bri: level, on: percent > 0, transitiontime: transitionTime * 10])
+	put("${deviceType}/$id/${getApi(deviceType)}", [bri: level, on: percent > 0, transitiontime: transitionTime]) // By nswilliams: removed x 10 to have faster transitionTime
 	return "Setting level to $percent"
 }
 
@@ -1391,7 +1391,7 @@ def setSaturation(childDevice, percent, transitionTime, deviceType) {
 	updateInProgress()
 	// 0 - 254
 	def level = Math.min(Math.round(percent * 255 / 100), 255)
-	put("${deviceType}/$id/${getApi(deviceType)}", [sat: level, on: true, transitiontime: transitionTime * 10])
+	put("${deviceType}/$id/${getApi(deviceType)}", [sat: level, on: true, transitiontime: transitionTime]) // By nswilliams: removed x 10 to have faster transitionTime
 	return "Setting saturation to $percent"
 }
 
@@ -1401,7 +1401,7 @@ def setHue(childDevice, percent, transitionTime, deviceType) {
 	updateInProgress()
 	// 0 - 65535
 	def level =	Math.min(Math.round(percent * 65535 / 100), 65535)
-	put("${deviceType}/$id/${getApi(deviceType)}", [hue: level, transitiontime: transitionTime * 10])
+	put("${deviceType}/$id/${getApi(deviceType)}", [hue: level, transitiontime: transitionTime]) // By nswilliams: removed x 10 to have faster transitionTime
 	return "Setting hue to $percent"
 }
 
@@ -1421,7 +1421,7 @@ def setColorTemperature(childDevice, huesettings, transitionTime, deviceType) {
 		huesettings = (((huesettings - stMin) * hueRange) / stRange) + hueMin
 	}
 	def ct = Math.round(1000000 / huesettings) as Integer
-	def value = [ct: ct, on: true, transitiontime: transitionTime * 10]
+	def value = [ct: ct, on: true, transitiontime: transitionTime] // By nswilliams: removed x 10 to have faster transitionTime
 	put("${deviceType}/$id/${getApi(deviceType)}", value)
 	return "Setting color temperature to $percent"
 }
@@ -1471,13 +1471,15 @@ def setColor(childDevice, huesettings, deviceType) {
         value.bri = stLeveltoHue(huesettings.level)
     }
     value.alert = huesettings.alert ? huesettings.alert : "none"
-    value.transitiontime = huesettings.transitiontime ? huesettings.transitiontime : 10
-
+   
 	// Make sure to turn off light if requested
 	if (huesettings.switch == "off")
 		value.on = false
 
-    createSwitchEvent(childDevice, value.on ? "on" : "off")
+	// Fixed by nswilliams - add transitiontime only if it is on -ALSO- added !=null to make zero value to get thru as well Time instead of time
+    if (value.on) value.transitiontime = (huesettings.transitionTime!=null) ? huesettings.transitionTime : 4
+
+	createSwitchEvent(childDevice, value.on ? "on" : "off")
     put("${deviceType}/$id/${getApi(deviceType)}", value)
     return "Setting color to $value"
 }
